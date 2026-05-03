@@ -6,7 +6,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     scoreGauge = new ScoreGauge('scoreGauge');
     window.scoreGauge = scoreGauge;
-    scoreGauge.draw(0);
+    // Don't draw yet - canvas is hidden (display:none), will init on first animateTo()
 
     // Analyze button handler
     document.getElementById('analyzeBtn').addEventListener('click', startAnalysis);
@@ -43,6 +43,8 @@
       document.querySelector('.features').style.display = 'none';
       document.querySelector('.upload-section').style.display = 'none';
       
+      // Small delay to let DOM update visibility before rendering canvas
+      await new Promise(resolve => setTimeout(resolve, 100));
       Dashboard.render(result);
     } catch (error) {
       overlay.classList.remove('active');

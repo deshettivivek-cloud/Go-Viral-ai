@@ -1,22 +1,44 @@
 // Canvas-based animated gauge chart
 class ScoreGauge {
   constructor(canvasId) {
+    this.canvasId = canvasId;
     this.canvas = document.getElementById(canvasId);
     this.ctx = this.canvas.getContext('2d');
     this.currentScore = 0;
     this.targetScore = 0;
     this.animating = false;
-    this.setupHiDPI();
+    this.w = 0;
+    this.h = 0;
+    this.initialized = false;
   }
 
   setupHiDPI() {
     const dpr = window.devicePixelRatio || 1;
+    // Use the CSS-specified size from the element's style/class
     const rect = this.canvas.getBoundingClientRect();
-    this.canvas.width = rect.width * dpr;
-    this.canvas.height = rect.height * dpr;
+    let w = rect.width;
+    let h = rect.height;
+    
+    // Fallback if element is hidden (0x0)
+    if (w === 0 || h === 0) {
+      w = parseInt(this.canvas.style.width) || parseInt(getComputedStyle(this.canvas).width) || 220;
+      h = parseInt(this.canvas.style.height) || parseInt(getComputedStyle(this.canvas).height) || 220;
+    }
+    
+    this.canvas.width = w * dpr;
+    this.canvas.height = h * dpr;
     this.ctx.scale(dpr, dpr);
-    this.w = rect.width;
-    this.h = rect.height;
+    this.w = w;
+    this.h = h;
+    this.initialized = true;
+  }
+
+  ensureInit() {
+    if (!this.initialized || this.w === 0 || this.h === 0) {
+      this.canvas = document.getElementById(this.canvasId);
+      this.ctx = this.canvas.getContext('2d');
+      this.setupHiDPI();
+    }
   }
 
   getColor(score) {
@@ -46,6 +68,9 @@ class ScoreGauge {
   }
 
   draw(score) {
+    this.ensureInit();
+    if (this.w === 0 || this.h === 0) return;
+    
     const ctx = this.ctx;
     const cx = this.w / 2, cy = this.h / 2;
     const r = Math.min(cx, cy) - 15;
@@ -102,10 +127,14 @@ class ScoreGauge {
   }
 
   animateTo(target) {
+    // Re-initialize canvas since results section just became visible
+    this.initialized = false;
+    this.ensureInit();
+    
     this.targetScore = target;
-    if (this.animating) return;
     this.animating = true;
-    const start = this.currentScore;
+    const start = 0;
+    this.currentScore = 0;
     const duration = 2000;
     const startTime = performance.now();
     const scoreEl = document.getElementById('scoreValue');
@@ -113,7 +142,7 @@ class ScoreGauge {
     const step = (now) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
       this.currentScore = start + (this.targetScore - start) * eased;
       this.draw(this.currentScore);
       if (scoreEl) scoreEl.textContent = Math.round(this.currentScore);
@@ -129,7 +158,7 @@ class ScoreGauge {
   reset() {
     this.currentScore = 0;
     this.targetScore = 0;
-    this.draw(0);
+    this.initialized = false;
     const scoreEl = document.getElementById('scoreValue');
     if (scoreEl) scoreEl.textContent = '0';
   }
